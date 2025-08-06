@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 export const loginSchema = z.object({
-    username: z
+    name: z
         .string({ message: "имя пользователя не указано" })
         .min(4, "слишком короткое имя пользователя")
         .max(64, "слишком длинное имя пользователя"),

@@ -13,7 +13,7 @@ export const Route = createFileRoute('/_auth/login')({
 })
 
 const defaultValues: LoginSchema = {
-    username: "",
+    name: "",
     password: ""
 }
 
@@ -46,13 +46,14 @@ function RouteComponent() {
     return (
         <div className='flex flex-col h-screen items-center justify-center'>
             <div className='space-y-3'>
+                <h1 className='font-medium'>авторизация</h1>
                 <div className='space-y-1'>
                     <Label>имя пользователя</Label>
                     <Input
                         disabled={loading}
-                        value={values.username}
+                        value={values.name}
                         onChange={e => setValues(state => ({
-                            ...state, username: e.target.value
+                            ...state, name: e.target.value
                         }))}
                     />
                 </div>
