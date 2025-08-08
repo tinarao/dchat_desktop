@@ -1,6 +1,7 @@
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { verifySession } from '@/lib/api/auth'
+import { getMyRooms, getRoomsICreated } from '@/lib/api/rooms'
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_app')({
@@ -14,12 +15,28 @@ export const Route = createFileRoute('/_app')({
             })
         }
     },
+    async loader(_ctx) {
+        const roomsResult = await getMyRooms()
+        if (!roomsResult.ok) {
+            // todo handle
+            console.error(roomsResult.error)
+            throw redirect({
+                to: "/app"
+            })
+        }
+
+        return {
+            rooms: roomsResult.data || []
+        }
+    },
 })
 
 function RouteComponent() {
+    const { rooms } = Route.useLoaderData()
+
     return (
         <SidebarProvider>
-            <AppSidebar />
+            <AppSidebar createdRooms={rooms || []} />
             <main>
                 <SidebarTrigger />
                 <Outlet />

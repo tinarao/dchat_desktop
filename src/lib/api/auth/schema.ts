@@ -1,10 +1,13 @@
 import { z } from "zod"
 
+export const userValidators = {
+    userName: z.string({ message: "имя пользователя не указано" })
+        .min(4, "Слишком короткое имя пользователя")
+        .max(128, "Слишком длинное имя пользователя"),
+}
+
 export const loginSchema = z.object({
-    name: z
-        .string({ message: "имя пользователя не указано" })
-        .min(4, "слишком короткое имя пользователя")
-        .max(64, "слишком длинное имя пользователя"),
+    name: userValidators.userName,
     password: z
         .string({ message: "пароль не указан" })
         .min(8, "слишком короткий пароль")
