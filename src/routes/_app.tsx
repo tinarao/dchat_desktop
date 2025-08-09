@@ -1,15 +1,16 @@
-import { AppSidebar } from '@/components/app-sidebar'
+import { AppSidebar } from '@/components/sidebar/app-sidebar'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { verifySession } from '@/lib/api/auth'
-import { getMyRooms, getRoomsICreated } from '@/lib/api/rooms'
+import { getMyRooms } from '@/lib/api/rooms'
+import { userStore } from '@/store/user'
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 export const Route = createFileRoute('/_app')({
     component: RouteComponent,
     async beforeLoad(_ctx) {
         const result = await verifySession()
         if (!result.ok) {
-            console.log(result.error)
             throw redirect({
                 to: "/auth",
             })
@@ -33,6 +34,11 @@ export const Route = createFileRoute('/_app')({
 
 function RouteComponent() {
     const { rooms } = Route.useLoaderData()
+    const { fetchUserData } = userStore()
+
+    useEffect(() => {
+        fetchUserData()
+    }, [])
 
     return (
         <SidebarProvider>

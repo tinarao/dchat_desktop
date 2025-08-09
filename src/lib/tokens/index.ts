@@ -19,3 +19,11 @@ export async function getToken() {
 
     return await store.get<string>(TOKEN_KEY)
 }
+
+export async function deleteToken() {
+    const store = await load(STORE_FILE_PATH, {
+        autoSave: false
+    })
+
+    return await store.delete(TOKEN_KEY)
+}

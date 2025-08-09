@@ -22,7 +22,7 @@ function RouteComponent() {
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
 
-    async function handleLogin() {
+    async function handleSignup() {
         setLoading(true)
 
         try {
@@ -33,6 +33,7 @@ function RouteComponent() {
             }
 
             toast.success("вход выполнен успешно")
+            await login(values)
             await navigate({ to: "/app" })
         } catch (e) {
             toast.error("возникла непредвиденная ошибка")
@@ -71,7 +72,7 @@ function RouteComponent() {
                 <Button
                     disabled={loading}
                     size='sm'
-                    onClick={handleLogin}
+                    onClick={handleSignup}
                 >
                     {loading ? <LoaderCircleIcon className='animate-spin' /> : <LogInIcon />}
                     войти
