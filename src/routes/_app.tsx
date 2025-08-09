@@ -1,10 +1,10 @@
 import { AppSidebar } from '@/components/sidebar/app-sidebar'
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { verifySession } from '@/lib/api/auth'
 import { getMyRooms } from '@/lib/api/rooms'
 import { userStore } from '@/store/user'
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export const Route = createFileRoute('/_app')({
     component: RouteComponent,
@@ -35,18 +35,23 @@ export const Route = createFileRoute('/_app')({
 function RouteComponent() {
     const { rooms } = Route.useLoaderData()
     const { fetchUserData } = userStore()
+    const [showTrigger, setShowTrigger] = useState(false)
+    const { isMobile } = useSidebar()
 
     useEffect(() => {
         fetchUserData()
-    }, [])
+        setShowTrigger(isMobile)
+    }, [isMobile])
 
     return (
-        <SidebarProvider>
+        <>
             <AppSidebar createdRooms={rooms || []} />
-            <main>
-                <SidebarTrigger />
-                <Outlet />
+            <main className='flex h-screen w-full  p-4'>
+                <div className='flex-1'>
+                    <Outlet />
+                </div>
+                {showTrigger && <SidebarTrigger />}
             </main>
-        </SidebarProvider>
+        </>
     )
 }

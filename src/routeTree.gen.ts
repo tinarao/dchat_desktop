@@ -15,6 +15,7 @@ import { Route as AuthRegisterRouteImport } from './routes/_auth/register'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthAuthRouteImport } from './routes/_auth/auth'
 import { Route as AppAppIndexRouteImport } from './routes/_app/app.index'
+import { Route as AppAppChatRoomIdRouteImport } from './routes/_app/app.chat.$roomId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -45,6 +46,11 @@ const AppAppIndexRoute = AppAppIndexRouteImport.update({
   path: '/app/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAppChatRoomIdRoute = AppAppChatRoomIdRouteImport.update({
+  id: '/app/chat/$roomId',
+  path: '/app/chat/$roomId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/app': typeof AppAppIndexRoute
+  '/app/chat/$roomId': typeof AppAppChatRoomIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/register': typeof AuthRegisterRoute
   '/app': typeof AppAppIndexRoute
+  '/app/chat/$roomId': typeof AppAppChatRoomIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,12 +76,19 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/register': typeof AuthRegisterRoute
   '/_app/app/': typeof AppAppIndexRoute
+  '/_app/app/chat/$roomId': typeof AppAppChatRoomIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/login' | '/register' | '/app'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/login'
+    | '/register'
+    | '/app'
+    | '/app/chat/$roomId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/login' | '/register' | '/app'
+  to: '/' | '/auth' | '/login' | '/register' | '/app' | '/app/chat/$roomId'
   id:
     | '__root__'
     | '/'
@@ -82,6 +97,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/register'
     | '/_app/app/'
+    | '/_app/app/chat/$roomId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -136,15 +152,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/app/chat/$roomId': {
+      id: '/_app/app/chat/$roomId'
+      path: '/app/chat/$roomId'
+      fullPath: '/app/chat/$roomId'
+      preLoaderRoute: typeof AppAppChatRoomIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppAppIndexRoute: typeof AppAppIndexRoute
+  AppAppChatRoomIdRoute: typeof AppAppChatRoomIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAppIndexRoute: AppAppIndexRoute,
+  AppAppChatRoomIdRoute: AppAppChatRoomIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
