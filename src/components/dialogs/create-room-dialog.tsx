@@ -29,8 +29,6 @@ export function CreateRoomDialog({ children }: PropsWithChildren) {
                 isPrivate
             })
 
-            console.log(result)
-
             if (!result.ok) {
                 toast.error(result.error)
                 return
