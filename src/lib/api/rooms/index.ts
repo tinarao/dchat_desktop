@@ -73,7 +73,31 @@ export async function createRoom(data: CreateRoomSchema): Promise<Result<{ room:
             return { ok: false, error: json.error || "ошибка авторизации" }
         }
 
-        const _json: { room: Room } = await response.json()
+        return { ok: true }
+    } catch (e) {
+        console.error(e)
+        return { ok: false, error: "Сервер недоступен" }
+    }
+}
+
+export async function deleteRoom(roomId: number): Promise<Result> {
+    const token = await getToken();
+    const route = getApiRoute("/rooms/" + roomId)
+
+    try {
+        const response = await fetch(route, {
+            method: "DELETE",
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/json"
+            }
+        })
+
+        if (!response.ok) {
+            const json: ErrorResponse = await response.json()
+            return { ok: false, error: json.error }
+        }
+
         return { ok: true }
     } catch (e) {
         console.error(e)
