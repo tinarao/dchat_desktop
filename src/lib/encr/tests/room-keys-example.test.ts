@@ -96,7 +96,7 @@ function removeUserFromRoom(roomId: string, userId: string) {
     room.updatedAt = Date.now()
 }
 
-describe("Group Chat Encryption", () => {
+describe("group chat encryption", () => {
     beforeEach(() => {
         rooms = new Map()
         users = new Map()

@@ -11,7 +11,7 @@ import {
 } from ".."
 import { addParticipantToRoom, createEncryptedRoomKeys, removeParticipantFromRoom } from "./helpers"
 
-describe("encryption module", () => {
+describe("room keys", () => {
     test("generateKeyPair generates a keypair", () => {
         const keys = generateUserKeyPair()
         expect(keys).toHaveProperty("publicKey");
@@ -75,6 +75,18 @@ describe("encryption module", () => {
         expect(() => {
             decryptRoomKeyForUser(myEncrRoomKey, badGuyKeyPair.privateKey)
         }).toThrow()
+
+
+        expect(() => {
+            decryptRoomKeyForUser(myEncrRoomKey, new Uint8Array)
+        }).toThrow()
+
+
+        for (const i in Array.from({ length: 500 }, (_, i) => i)) {
+            expect(() => {
+                decryptRoomKeyForUser(myEncrRoomKey, generateUserKeyPair().privateKey)
+            }).toThrow()
+        }
 
         expect(() => {
             decryptRoomKeyForUser(myEncrRoomKey, myKeyPair.privateKey)

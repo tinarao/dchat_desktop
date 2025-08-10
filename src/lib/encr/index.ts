@@ -2,9 +2,26 @@ import * as x25519 from "@stablelib/x25519"
 import { createCipheriv, createDecipheriv, createECDH, hkdfSync, randomBytes } from "crypto"
 
 export type Bytes = Uint8Array
-type KeyPair = {
+
+export type KeyPair = {
     publicKey: Bytes
     privateKey: Bytes
+}
+
+export type EncryptedRoomKey = {
+    userId: string;
+    encryptedKey: Bytes;
+    ephemeralPublicKey: Bytes;
+    salt: Bytes;
+    nonce: Bytes;
+    timestamp: number;
+}
+
+export type RoomKeyData = {
+    roomId: string;
+    encryptedKeys: EncryptedRoomKey[];
+    createdAt: number;
+    updatedAt: number;
 }
 
 export function generateUserKeyPair(): KeyPair {
@@ -16,24 +33,10 @@ export function generateUserKeyPair(): KeyPair {
     }
 }
 
+// room keys
+
 export function generateRoomKey(): Bytes {
     return randomBytes(32);
-}
-
-export interface EncryptedRoomKey {
-    userId: string;
-    encryptedKey: Bytes;
-    ephemeralPublicKey: Bytes;
-    salt: Bytes;
-    nonce: Bytes;
-    timestamp: number;
-}
-
-export interface RoomKeyData {
-    roomId: string;
-    encryptedKeys: EncryptedRoomKey[];
-    createdAt: number;
-    updatedAt: number;
 }
 
 export function encryptRoomKeyForUser(
@@ -92,6 +95,41 @@ export function decryptRoomKeyForUser(
         decipher.final()
     ]);
 }
+
+// messages
+
+export function encryptMessage(plainMessage: string, roomKey: Bytes) {
+    const nonce = randomBytes(12)
+    const cipher = createCipheriv("aes-256-gcm", roomKey, nonce)
+    const encrypted = Buffer.concat([
+        cipher.update(plainMessage, "utf8"),
+        cipher.final(),
+        cipher.getAuthTag()
+    ])
+
+    return Buffer.concat([nonce, encrypted])
+}
+
+export function decryptMessage(encrypted: Bytes, roomKey: Bytes): string {
+    if (encrypted.length < 12 + 16) {
+        throw "Invalid data"
+    }
+
+    const nonce = encrypted.subarray(0, 12)
+    const ciphertextWithTag = encrypted.subarray(12)
+    const cipherText = ciphertextWithTag.subarray(0, -16)
+    const authTag = ciphertextWithTag.subarray(-16)
+
+    const decipher = createDecipheriv("aes-256-gcm", roomKey, nonce)
+    decipher.setAuthTag(authTag)
+
+    return Buffer.concat([
+        decipher.update(cipherText),
+        decipher.final()
+    ]).toString('utf8')
+}
+
+// helpers
 
 export function encryptRoomKeyToBase64JSON(data: EncryptedRoomKey): string {
     const obj = {
