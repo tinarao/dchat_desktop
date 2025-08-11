@@ -87,7 +87,36 @@ export async function signup(data: LoginSchema): Promise<Result> {
         console.error(e)
         return { ok: false, error: "Сервер недоступен" }
     }
+}
 
+export async function sendPublicKey(publicKeyB64: string): Promise<Result> {
+    const token = await getToken()
+    const route = getApiRoute("/auth/update")
+
+    try {
+        const response = await fetch(route, {
+            method: "PATCH",
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                publicKey: publicKeyB64
+            })
+        })
+
+        if (!response.ok) {
+            const { error }: ErrorResponse = await response.json()
+            return { ok: false, error }
+        }
+
+        return { ok: true }
+    } catch (e) {
+        console.error(e)
+        return { ok: false, error: "Сервер недоступен" }
+    } finally {
+        await deleteToken();
+    }
 }
 
 export async function logout(): Promise<Result> {

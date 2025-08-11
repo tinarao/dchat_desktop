@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { nodePolyfills } from "vite-plugin-node-polyfills"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -14,7 +15,8 @@ export default defineConfig(async () => ({
             autoCodeSplitting: true,
         }),
         react(),
-        tailwindcss()
+        tailwindcss(),
+        nodePolyfills()
     ],
     resolve: {
         alias: {

@@ -1,169 +1,178 @@
-import * as x25519 from "@stablelib/x25519"
-import { createCipheriv, createDecipheriv, createECDH, hkdfSync, randomBytes } from "crypto"
+import * as x25519 from "@stablelib/x25519";
+import {
+  createCipheriv,
+  createDecipheriv,
+  hkdfSync,
+  randomBytes,
+} from "crypto";
 
-export type Bytes = Uint8Array
+export type Bytes = Uint8Array;
 
 export type KeyPair = {
-    publicKey: Bytes
-    privateKey: Bytes
-}
+  publicKey: Bytes;
+  privateKey: Bytes;
+};
 
 export type EncryptedRoomKey = {
-    userId: string;
-    encryptedKey: Bytes;
-    ephemeralPublicKey: Bytes;
-    salt: Bytes;
-    nonce: Bytes;
-    timestamp: number;
-}
+  userId: string;
+  encryptedKey: Bytes;
+  ephemeralPublicKey: Bytes;
+  salt: Bytes;
+  nonce: Bytes;
+  timestamp: number;
+};
 
 export type RoomKeyData = {
-    roomId: string;
-    encryptedKeys: EncryptedRoomKey[];
-    createdAt: number;
-    updatedAt: number;
-}
+  roomId: string;
+  encryptedKeys: EncryptedRoomKey[];
+  createdAt: number;
+  updatedAt: number;
+};
 
 export function generateUserKeyPair(): KeyPair {
-    const kp = x25519.generateKeyPair()
+  const kp = x25519.generateKeyPair();
 
-    return {
-        publicKey: kp.publicKey,
-        privateKey: kp.secretKey
-    }
+  return {
+    publicKey: kp.publicKey,
+    privateKey: kp.secretKey,
+  };
 }
 
 // room keys
 
 export function generateRoomKey(): Bytes {
-    return randomBytes(32);
+  return randomBytes(32);
 }
 
 export function encryptRoomKeyForUser(
-    roomKey: Bytes,
-    recipientPublicKey: Bytes,
-    userId: string
+  roomKey: Bytes,
+  recipientPublicKey: Bytes,
+  userId: string
 ): EncryptedRoomKey {
-    const ephemeralKeyPair = x25519.generateKeyPair();
-    const sharedSecret = x25519.sharedKey(ephemeralKeyPair.secretKey, recipientPublicKey);
+  const ephemeralKeyPair = x25519.generateKeyPair();
+  const sharedSecret = x25519.sharedKey(
+    ephemeralKeyPair.secretKey,
+    recipientPublicKey
+  );
 
-    const salt = randomBytes(32);
-    const info = Buffer.from('room-key-incr', 'utf8');
-    const derived = hkdfSync('sha256', sharedSecret, salt, info, 32);
+  const salt = randomBytes(32);
+  const info = Buffer.from("room-key-incr", "utf8");
+  const derived = hkdfSync("sha256", sharedSecret, salt, info, 32);
 
-    const nonce = randomBytes(12);
-    const cipher = createCipheriv('aes-256-gcm', Buffer.from(derived), nonce);
-    const encrypted = Buffer.concat([
-        cipher.update(roomKey),
-        cipher.final(),
-        cipher.getAuthTag()
-    ]);
+  const nonce = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", Buffer.from(derived), nonce);
+  const encrypted = Buffer.concat([
+    cipher.update(roomKey),
+    cipher.final(),
+    cipher.getAuthTag(),
+  ]);
 
-    return {
-        userId,
-        encryptedKey: encrypted,
-        ephemeralPublicKey: ephemeralKeyPair.publicKey,
-        salt,
-        nonce,
-        timestamp: Date.now()
-    };
+  return {
+    userId,
+    encryptedKey: encrypted,
+    ephemeralPublicKey: ephemeralKeyPair.publicKey,
+    salt,
+    nonce,
+    timestamp: Date.now(),
+  };
 }
 
 export function decryptRoomKeyForUser(
-    encryptedRoomKey: EncryptedRoomKey,
-    userPrivateKey: Bytes
+  encryptedRoomKey: EncryptedRoomKey,
+  userPrivateKey: Bytes
 ): Bytes {
-    const { encryptedKey, ephemeralPublicKey, salt, nonce } = encryptedRoomKey;
+  const { encryptedKey, ephemeralPublicKey, salt, nonce } = encryptedRoomKey;
 
-    if (encryptedKey.length < 16) {
-        throw new Error('Invalid encrypted data');
-    }
+  if (encryptedKey.length < 16) {
+    throw new Error("Invalid encrypted data");
+  }
 
-    const ciphertextWithTag = encryptedKey;
-    const ciphertext = ciphertextWithTag.subarray(0, -16);
-    const authTag = ciphertextWithTag.subarray(-16);
+  const ciphertextWithTag = encryptedKey;
+  const ciphertext = ciphertextWithTag.subarray(0, -16);
+  const authTag = ciphertextWithTag.subarray(-16);
 
-    const sharedSecret = x25519.sharedKey(userPrivateKey, ephemeralPublicKey);
-    const info = Buffer.from('room-key-incr', 'utf8');
-    const derivedKey = hkdfSync('sha256', sharedSecret, salt, info, 32);
+  const sharedSecret = x25519.sharedKey(userPrivateKey, ephemeralPublicKey);
+  const info = Buffer.from("room-key-incr", "utf8");
+  const derivedKey = hkdfSync("sha256", sharedSecret, salt, info, 32);
 
-    const decipher = createDecipheriv('aes-256-gcm', Buffer.from(derivedKey), nonce);
-    decipher.setAuthTag(authTag);
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(derivedKey),
+    nonce
+  );
+  decipher.setAuthTag(authTag);
 
-    return Buffer.concat([
-        decipher.update(ciphertext),
-        decipher.final()
-    ]);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 }
 
 // messages
 
 export function encryptMessage(plainMessage: string, roomKey: Bytes) {
-    const nonce = randomBytes(12)
-    const cipher = createCipheriv("aes-256-gcm", roomKey, nonce)
-    const encrypted = Buffer.concat([
-        cipher.update(plainMessage, "utf8"),
-        cipher.final(),
-        cipher.getAuthTag()
-    ])
+  const nonce = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", roomKey, nonce);
+  const encrypted = Buffer.concat([
+    cipher.update(plainMessage, "utf8"),
+    cipher.final(),
+    cipher.getAuthTag(),
+  ]);
 
-    return Buffer.concat([nonce, encrypted])
+  return Buffer.concat([nonce, encrypted]);
 }
 
 export function decryptMessage(encrypted: Bytes, roomKey: Bytes): string {
-    if (encrypted.length < 12 + 16) {
-        throw "Invalid data"
-    }
+  if (encrypted.length < 12 + 16) {
+    throw "Invalid data";
+  }
 
-    const nonce = encrypted.subarray(0, 12)
-    const ciphertextWithTag = encrypted.subarray(12)
-    const cipherText = ciphertextWithTag.subarray(0, -16)
-    const authTag = ciphertextWithTag.subarray(-16)
+  const nonce = encrypted.subarray(0, 12);
+  const ciphertextWithTag = encrypted.subarray(12);
+  const cipherText = ciphertextWithTag.subarray(0, -16);
+  const authTag = ciphertextWithTag.subarray(-16);
 
-    const decipher = createDecipheriv("aes-256-gcm", roomKey, nonce)
-    decipher.setAuthTag(authTag)
+  const decipher = createDecipheriv("aes-256-gcm", roomKey, nonce);
+  decipher.setAuthTag(authTag);
 
-    return Buffer.concat([
-        decipher.update(cipherText),
-        decipher.final()
-    ]).toString('utf8')
+  return Buffer.concat([
+    decipher.update(cipherText),
+    decipher.final(),
+  ]).toString("utf8");
 }
 
 // helpers
 
 export function encryptRoomKeyToBase64JSON(data: EncryptedRoomKey): string {
-    const obj = {
-        userId: data.userId,
-        encryptedKey: uint8ToBase64(data.encryptedKey),
-        ephemeralPublicKey: uint8ToBase64(data.ephemeralPublicKey),
-        salt: uint8ToBase64(data.salt),
-        nonce: uint8ToBase64(data.nonce),
-        timestamp: data.timestamp
-    };
-    return btoa(JSON.stringify(obj));
+  const obj = {
+    userId: data.userId,
+    encryptedKey: uint8ToBase64(data.encryptedKey),
+    ephemeralPublicKey: uint8ToBase64(data.ephemeralPublicKey),
+    salt: uint8ToBase64(data.salt),
+    nonce: uint8ToBase64(data.nonce),
+    timestamp: data.timestamp,
+  };
+  return btoa(JSON.stringify(obj));
 }
 
 export function base64ToEncryptRoomKeyJSON(base64: string): EncryptedRoomKey {
-    const obj = JSON.parse(atob(base64));
-    return {
-        userId: obj.userId,
-        encryptedKey: base64ToUint8(obj.encryptedKey),
-        ephemeralPublicKey: base64ToUint8(obj.ephemeralPublicKey),
-        salt: base64ToUint8(obj.salt),
-        nonce: base64ToUint8(obj.nonce),
-        timestamp: obj.timestamp
-    };
+  const obj = JSON.parse(atob(base64));
+  return {
+    userId: obj.userId,
+    encryptedKey: base64ToUint8(obj.encryptedKey),
+    ephemeralPublicKey: base64ToUint8(obj.ephemeralPublicKey),
+    salt: base64ToUint8(obj.salt),
+    nonce: base64ToUint8(obj.nonce),
+    timestamp: obj.timestamp,
+  };
 }
 
-function uint8ToBase64(bytes: Uint8Array): string {
-    return btoa(String.fromCharCode(...bytes));
+export function uint8ToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
 }
 
-function base64ToUint8(base64: string): Uint8Array {
-    const binaryStr = atob(base64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-    }
-    return bytes;
+export function base64ToUint8(base64: string): Uint8Array {
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
 }

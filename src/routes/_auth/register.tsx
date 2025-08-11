@@ -1,8 +1,10 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { login, signup } from '@/lib/api/auth'
+import { login, sendPublicKey, signup } from '@/lib/api/auth'
 import { LoginSchema } from '@/lib/api/auth/schema'
+import { generateUserKeyPair, uint8ToBase64 } from '@/lib/encr'
+import { savePrivateKey } from '@/lib/private-keys'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { LoaderCircleIcon, LogInIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -32,7 +34,19 @@ function RouteComponent() {
                 return
             }
 
-            toast.success("вход выполнен успешно")
+            const keyPair = generateUserKeyPair()
+            const publicBase64 = uint8ToBase64(keyPair.publicKey)
+            const privateBase64 = uint8ToBase64(keyPair.privateKey)
+
+            await savePrivateKey(privateBase64)
+
+            const keyResult = await sendPublicKey(publicBase64)
+            if (!keyResult.ok) {
+                // idk man
+                toast.error("непредвиденная ошибка сервера")
+                return
+            }
+
             await login(values)
             await navigate({ to: "/app" })
         } catch (e) {

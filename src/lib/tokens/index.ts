@@ -1,7 +1,7 @@
 import { load } from "@tauri-apps/plugin-store"
+import { STORE_FILE_PATH } from "../constants"
 
 const TOKEN_KEY = "token"
-const STORE_FILE_PATH = "store.json"
 
 export async function setToken(token: string) {
     const store = await load(STORE_FILE_PATH, {
