@@ -28,6 +28,7 @@ export const Route = createFileRoute('/_app/app/chat/$roomId')({
 async function getAndDecryptRoomKey(roomId: number) {
     const result = await getEncryptedRoomKey(roomId)
     if (!result.ok || !result.data) {
+        console.log("encrRoomKey result", result)
         return undefined
     }
 
@@ -52,9 +53,10 @@ function RouteComponent() {
     useEffect(() => {
         if (!room) throw navigate({ to: "/" })
         getAndDecryptRoomKey(room.id)
-            .then(r => {
-                if (!r) return
-                setRoomKey(r)
+            .then(data => {
+                if (!data) return
+                console.log(data)
+                setRoomKey(data)
             })
     }, [])
 

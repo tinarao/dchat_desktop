@@ -58,5 +58,4 @@ export async function getEncryptedRoomKey(roomId: number): Promise<Result<string
         console.error(e)
         return { ok: false, error: "Сервер недоступен" }
     }
-
 }
