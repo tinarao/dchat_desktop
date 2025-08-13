@@ -35,23 +35,20 @@ export const Route = createFileRoute('/_app')({
 function RouteComponent() {
     const { rooms } = Route.useLoaderData()
     const { fetchUserData } = userStore()
-    const [showTrigger, setShowTrigger] = useState(false)
-    const { isMobile } = useSidebar()
 
     useEffect(() => {
         fetchUserData()
-        setShowTrigger(isMobile)
-    }, [isMobile])
+    }, [])
 
     return (
-        <>
+        <SidebarProvider>
             <AppSidebar createdRooms={rooms || []} />
             <main className='flex h-screen w-full  p-4'>
                 <div className='flex-1'>
                     <Outlet />
                 </div>
-                {showTrigger && <SidebarTrigger />}
+                <SidebarTrigger className='flex md:hidden' />
             </main>
-        </>
+        </SidebarProvider>
     )
 }

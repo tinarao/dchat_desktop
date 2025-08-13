@@ -114,8 +114,6 @@ export async function sendPublicKey(publicKeyB64: string): Promise<Result> {
     } catch (e) {
         console.error(e)
         return { ok: false, error: "Сервер недоступен" }
-    } finally {
-        await deleteToken();
     }
 }
 
@@ -144,6 +142,7 @@ export function userResponseToCamelCase(rawUserData: UserKebabCase): User {
     return {
         id: rawUserData.id,
         name: rawUserData.name,
+        publicKey: rawUserData.public_key,
         insertedAt: rawUserData.inserted_at,
         updatedAt: rawUserData.updated_at
     }

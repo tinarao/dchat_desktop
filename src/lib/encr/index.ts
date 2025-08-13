@@ -1,10 +1,4 @@
 import * as x25519 from "@stablelib/x25519";
-import {
-  createCipheriv,
-  createDecipheriv,
-  hkdfSync,
-  randomBytes,
-} from "crypto";
 
 export type Bytes = Uint8Array;
 
@@ -41,35 +35,74 @@ export function generateUserKeyPair(): KeyPair {
 // room keys
 
 export function generateRoomKey(): Bytes {
-  return randomBytes(32);
+  return crypto.getRandomValues(new Uint8Array(32));
 }
 
-export function encryptRoomKeyForUser(
+async function hkdf(
+  salt: Uint8Array,
+  ikm: Uint8Array,
+  info: Uint8Array,
+  length: number
+): Promise<Uint8Array> {
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    ikm,
+    { name: "HKDF" },
+    false,
+    ["deriveBits"]
+  );
+
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: salt,
+      info: info,
+    },
+    baseKey,
+    length * 8
+  );
+
+  return new Uint8Array(bits);
+}
+
+async function importAesKey(keyData: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+export async function encryptRoomKeyForUser(
   roomKey: Bytes,
   recipientPublicKey: Bytes,
   userId: string
-): EncryptedRoomKey {
+): Promise<EncryptedRoomKey> {
   const ephemeralKeyPair = x25519.generateKeyPair();
   const sharedSecret = x25519.sharedKey(
     ephemeralKeyPair.secretKey,
     recipientPublicKey
   );
 
-  const salt = randomBytes(32);
-  const info = Buffer.from("room-key-incr", "utf8");
-  const derived = hkdfSync("sha256", sharedSecret, salt, info, 32);
+  const salt = crypto.getRandomValues(new Uint8Array(32));
+  const info = new TextEncoder().encode("room-key-incr");
+  const derived = await hkdf(salt, sharedSecret, info, 32);
 
-  const nonce = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", Buffer.from(derived), nonce);
-  const encrypted = Buffer.concat([
-    cipher.update(roomKey),
-    cipher.final(),
-    cipher.getAuthTag(),
-  ]);
+  const key = await importAesKey(derived);
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
+
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce },
+    key,
+    roomKey
+  );
 
   return {
     userId,
-    encryptedKey: encrypted,
+    encryptedKey: new Uint8Array(encrypted),
     ephemeralPublicKey: ephemeralKeyPair.publicKey,
     salt,
     nonce,
@@ -77,65 +110,66 @@ export function encryptRoomKeyForUser(
   };
 }
 
-export function decryptRoomKeyForUser(
+export async function decryptRoomKeyForUser(
   encryptedRoomKey: EncryptedRoomKey,
   userPrivateKey: Bytes
-): Bytes {
+): Promise<Bytes> {
   const { encryptedKey, ephemeralPublicKey, salt, nonce } = encryptedRoomKey;
 
-  if (encryptedKey.length < 16) {
-    throw new Error("Invalid encrypted data");
-  }
-
-  const ciphertextWithTag = encryptedKey;
-  const ciphertext = ciphertextWithTag.subarray(0, -16);
-  const authTag = ciphertextWithTag.subarray(-16);
-
   const sharedSecret = x25519.sharedKey(userPrivateKey, ephemeralPublicKey);
-  const info = Buffer.from("room-key-incr", "utf8");
-  const derivedKey = hkdfSync("sha256", sharedSecret, salt, info, 32);
+  const info = new TextEncoder().encode("room-key-incr");
+  const derived = await hkdf(salt, sharedSecret, info, 32);
 
-  const decipher = createDecipheriv(
-    "aes-256-gcm",
-    Buffer.from(derivedKey),
-    nonce
+  const key = await importAesKey(derived);
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: nonce },
+    key,
+    encryptedKey
   );
-  decipher.setAuthTag(authTag);
 
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return new Uint8Array(decrypted);
 }
 
-// messages
+export async function encryptMessage(
+  plainMessage: string,
+  roomKey: Bytes
+): Promise<Bytes> {
+  const key = await importAesKey(roomKey);
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(plainMessage);
 
-export function encryptMessage(plainMessage: string, roomKey: Bytes) {
-  const nonce = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", roomKey, nonce);
-  const encrypted = Buffer.concat([
-    cipher.update(plainMessage, "utf8"),
-    cipher.final(),
-    cipher.getAuthTag(),
-  ]);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce },
+    key,
+    encoded
+  );
 
-  return Buffer.concat([nonce, encrypted]);
+  const result = new Uint8Array(nonce.length + encrypted.byteLength);
+  result.set(nonce);
+  result.set(new Uint8Array(encrypted), nonce.length);
+  return result;
 }
 
-export function decryptMessage(encrypted: Bytes, roomKey: Bytes): string {
+export async function decryptMessage(
+  encrypted: Bytes,
+  roomKey: Bytes
+): Promise<string> {
   if (encrypted.length < 12 + 16) {
-    throw "Invalid data";
+    throw new Error("Invalid data");
   }
 
   const nonce = encrypted.subarray(0, 12);
-  const ciphertextWithTag = encrypted.subarray(12);
-  const cipherText = ciphertextWithTag.subarray(0, -16);
-  const authTag = ciphertextWithTag.subarray(-16);
+  const ciphertext = encrypted.subarray(12);
+  const key = await importAesKey(roomKey);
 
-  const decipher = createDecipheriv("aes-256-gcm", roomKey, nonce);
-  decipher.setAuthTag(authTag);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: nonce },
+    key,
+    ciphertext
+  );
 
-  return Buffer.concat([
-    decipher.update(cipherText),
-    decipher.final(),
-  ]).toString("utf8");
+  return new TextDecoder().decode(decrypted);
 }
 
 // helpers

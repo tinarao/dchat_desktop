@@ -34,21 +34,25 @@ function RouteComponent() {
                 return
             }
 
+
             const keyPair = generateUserKeyPair()
             const publicBase64 = uint8ToBase64(keyPair.publicKey)
             const privateBase64 = uint8ToBase64(keyPair.privateKey)
 
             await savePrivateKey(privateBase64)
 
+            const loginResult = await login(values)
+            console.log(loginResult)
+
             const keyResult = await sendPublicKey(publicBase64)
+            console.log(keyResult)
             if (!keyResult.ok) {
-                // idk man
+                console.log(keyResult.error)
                 toast.error("непредвиденная ошибка сервера")
-                return
             }
 
-            await login(values)
             await navigate({ to: "/app" })
+
         } catch (e) {
             toast.error("возникла непредвиденная ошибка")
             console.error(e)

@@ -12,7 +12,6 @@ interface Props {
 
 export function SidebarRoomButton({ room }: Props) {
     async function handleDeleteRoom() {
-        // change to alert dialog?
         const sure = confirm("Вы уверены? Все сообщения будут безвозвратно удалены")
         if (!sure) {
             return;

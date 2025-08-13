@@ -1,11 +1,14 @@
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useSocket } from '@/hooks/use-socket'
+import { getEncryptedRoomKey } from '@/lib/api/roomkeys'
 import { getRoomById } from '@/lib/api/rooms'
+import { base64ToEncryptRoomKeyJSON, base64ToUint8, decryptRoomKeyForUser, encryptMessage } from '@/lib/encr'
+import { getPrivateKey } from '@/lib/private-keys'
 import { cn } from '@/lib/utils'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { MessageCirclePlus, UnplugIcon } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 export const Route = createFileRoute('/_app/app/chat/$roomId')({
@@ -22,15 +25,41 @@ export const Route = createFileRoute('/_app/app/chat/$roomId')({
     },
 })
 
+async function getAndDecryptRoomKey(roomId: number) {
+    const result = await getEncryptedRoomKey(roomId)
+    if (!result.ok || !result.data) {
+        return undefined
+    }
+
+    const privateKey = await getPrivateKey()
+    if (!privateKey) {
+        return undefined
+    }
+
+    const encrKey = base64ToEncryptRoomKeyJSON(result.data)
+    const decrKey = await decryptRoomKeyForUser(encrKey, base64ToUint8(privateKey))
+    return decrKey
+}
+
 function RouteComponent() {
+    const [roomKey, setRoomKey] = useState<Uint8Array>(new Uint8Array())
+    const [newMessageStr, setNewMessageStr] = useState('')
+
     const { room } = Route.useLoaderData()
     const socket = useSocket()
     const navigate = useNavigate()
 
     useEffect(() => {
-        if (!room) {
-            throw navigate({ to: "/" })
-        }
+        if (!room) throw navigate({ to: "/" })
+        getAndDecryptRoomKey(room.id)
+            .then(r => {
+                if (!r) return
+                setRoomKey(r)
+            })
+    }, [])
+
+    useEffect(() => {
+        if (!room) throw navigate({ to: "/" })
 
         socket.init(`chat_channel:${room.id}`, {
             onConnect(messages) {
@@ -47,6 +76,17 @@ function RouteComponent() {
         return () => socket.stop()
     }, [])
 
+    async function handleSendMessage() {
+        if (!newMessageStr) return
+        toast(newMessageStr)
+
+        const encrypted = encryptMessage(newMessageStr, roomKey)
+        console.log(encrypted)
+        // await socket 
+
+        // setNewMessageStr('')
+    }
+
     return (
         <div className='flex flex-col justify-between h-full'>
             <div className='flex items-center justify-between'>
@@ -60,8 +100,8 @@ function RouteComponent() {
                 </div>
             </div>
             <div className='space-y-2'>
-                <Textarea rows={5} className='resize-none' />
-                <Button size="sm" variant="secondary">
+                <Textarea value={newMessageStr} onChange={e => setNewMessageStr(e.currentTarget.value)} rows={5} className='resize-none' />
+                <Button disabled={!socket.isConnected || !roomKey} onClick={handleSendMessage} size="sm" variant="secondary">
                     <MessageCirclePlus />
                     Отправить
                 </Button>

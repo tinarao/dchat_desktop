@@ -78,7 +78,7 @@ export async function getRoomsICreated(): Promise<Result<Room[]>> {
     }
 }
 
-export async function createRoom(data: CreateRoomSchema): Promise<Result<{ room: Room }>> {
+export async function createRoom(data: CreateRoomSchema): Promise<Result<Room>> {
     const token = await getToken()
 
     try {
@@ -97,7 +97,8 @@ export async function createRoom(data: CreateRoomSchema): Promise<Result<{ room:
             return { ok: false, error: json.error || "ошибка авторизации" }
         }
 
-        return { ok: true }
+        const json: { room: Room } = await response.json();
+        return { ok: true, data: json.room }
     } catch (e) {
         console.error(e)
         return { ok: false, error: "Сервер недоступен" }
