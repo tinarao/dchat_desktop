@@ -1,13 +1,14 @@
 import { WS_CHAT_URL } from "@/lib/constants";
 import { getToken } from "@/lib/tokens";
-import { Socket } from "phoenix";
+import { Channel, Socket } from "phoenix";
 import { useState } from "react";
 
 type Topic = `chat_channel:${string}`
 
 type EncryptedMessage = {
-    cipherText: string
-    iv: string
+    message: string,
+    created_at: string,
+    from: string
 }
 
 // Server-returned error messages are
@@ -23,13 +24,27 @@ type StartConnectionArgs = {
     onMessage?: (message: EncryptedMessage) => void
 }
 
+const NEW_MESSAGE_EVENT = "new_message" as const
 export const AUTH_ERROR_STRING = "Ошибка авторизации" as const;
 
 export function useSocket() {
     const [error, setError] = useState<string | undefined>(undefined)
     const [socket, setSocket] = useState<Socket | null>(null)
+    const [channel, setChannel] = useState<Channel | null>(null)
     const [messages, setMessages] = useState<EncryptedMessage[]>([])
     const [isConnected, setIsConnected] = useState(false)
+
+    async function sendMessage(msgBase64: string) {
+        const token = await getToken()
+        channel?.push(NEW_MESSAGE_EVENT, {
+            msgBase64: msgBase64,
+            token: token
+        })
+            .receive("ok", console.log)
+            .receive("error", ({ error }: { error: RecievedError }) => {
+                console.error(error)
+            })
+    }
 
     async function init(topicParam: Topic, args: StartConnectionArgs) {
         const token = await getToken()
@@ -46,12 +61,13 @@ export function useSocket() {
 
             socket_.connect()
 
-            const channel = socket_.channel(topicParam, {
+            const channel_ = socket_.channel(topicParam, {
                 token: token
             })
 
-            channel.join()
+            channel_.join()
                 .receive("ok", ({ messages }) => {
+                    setIsConnected(true)
                     args.onConnect?.(messages as EncryptedMessage[])
                 })
                 .receive("error", ({ error }: { error: RecievedError }) => {
@@ -59,13 +75,13 @@ export function useSocket() {
                     args.onError?.(error)
                 })
 
-            channel.on("new_message", (message: EncryptedMessage) => {
+            channel_.on("new_message", (message: EncryptedMessage) => {
                 setMessages(prev => [...prev, message])
                 args.onMessage?.(message)
             })
 
-            setIsConnected(true)
             setSocket(socket_)
+            setChannel(channel_)
         } catch (e) {
             console.error(e)
             setError("не удалось установить соединение")
@@ -83,7 +99,7 @@ export function useSocket() {
     }
 
     return {
-        init, stop,
+        init, stop, sendMessage,
         isConnected, messages, error
     }
 }

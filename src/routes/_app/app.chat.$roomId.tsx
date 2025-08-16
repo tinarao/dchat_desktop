@@ -3,7 +3,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useSocket } from '@/hooks/use-socket'
 import { getEncryptedRoomKey } from '@/lib/api/roomkeys'
 import { getRoomById } from '@/lib/api/rooms'
-import { base64ToEncryptRoomKeyJSON, base64ToUint8, decryptRoomKeyForUser, encryptMessage } from '@/lib/encr'
+import { base64ToEncryptRoomKeyJSON, base64ToUint8, decryptMessage, decryptRoomKeyForUser, encryptMessage, uint8ToBase64 } from '@/lib/encr'
 import { getPrivateKey } from '@/lib/private-keys'
 import { cn } from '@/lib/utils'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
@@ -14,51 +14,48 @@ import { toast } from 'sonner'
 export const Route = createFileRoute('/_app/app/chat/$roomId')({
     component: RouteComponent,
     async loader(ctx) {
-        const result = await getRoomById(parseInt(ctx.params.roomId))
+        const roomId = parseInt(ctx.params.roomId)
+
+        const result = await getRoomById(roomId)
         if (!result.ok) {
             throw redirect({ to: "/" })
         }
 
+        const encrRoomKeyResult = await getEncryptedRoomKey(roomId)
+        if (!encrRoomKeyResult.ok || !encrRoomKeyResult.data) {
+            console.log("encrRoomKey result", result)
+            throw redirect({ to: "/" })
+        }
+
+        const privateKey = await getPrivateKey()
+        if (!privateKey) {
+            throw redirect({ to: "/" })
+        }
+
+        console.log(privateKey)
+
+        const encrKey = base64ToEncryptRoomKeyJSON(encrRoomKeyResult.data)
+        const decrKey = await decryptRoomKeyForUser(encrKey, base64ToUint8(privateKey))
+
         return {
-            room: result.data
+            room: result.data,
+            roomKey: decrKey
         }
     },
 })
 
-async function getAndDecryptRoomKey(roomId: number) {
-    const result = await getEncryptedRoomKey(roomId)
-    if (!result.ok || !result.data) {
-        console.log("encrRoomKey result", result)
-        return undefined
-    }
-
-    const privateKey = await getPrivateKey()
-    if (!privateKey) {
-        return undefined
-    }
-
-    const encrKey = base64ToEncryptRoomKeyJSON(result.data)
-    const decrKey = await decryptRoomKeyForUser(encrKey, base64ToUint8(privateKey))
-    return decrKey
+type DecryptedMessage = {
+    message: string
+    from: string
+    createdAt: string
 }
 
 function RouteComponent() {
-    const [roomKey, setRoomKey] = useState<Uint8Array>(new Uint8Array())
+    const [messages, setMessages] = useState<DecryptedMessage[]>([])
     const [newMessageStr, setNewMessageStr] = useState('')
-
-    const { room } = Route.useLoaderData()
+    const { room, roomKey } = Route.useLoaderData()
     const socket = useSocket()
     const navigate = useNavigate()
-
-    useEffect(() => {
-        if (!room) throw navigate({ to: "/" })
-        getAndDecryptRoomKey(room.id)
-            .then(data => {
-                if (!data) return
-                console.log(data)
-                setRoomKey(data)
-            })
-    }, [])
 
     useEffect(() => {
         if (!room) throw navigate({ to: "/" })
@@ -67,8 +64,18 @@ function RouteComponent() {
             onConnect(messages) {
                 toast.success(JSON.stringify(messages))
             },
-            onMessage(message) {
-                toast.success(JSON.stringify(message))
+            async onMessage(message) {
+                const bytesMsg = base64ToUint8(message.message)
+                const decrypted = await decryptMessage(bytesMsg, roomKey)
+                toast.success(decrypted)
+
+                const decr: DecryptedMessage = {
+                    from: message.from,
+                    message: decrypted,
+                    createdAt: message.created_at
+                }
+
+                setMessages(p => [...p, decr])
             },
             onError(error) {
                 toast.error(error.title)
@@ -80,13 +87,11 @@ function RouteComponent() {
 
     async function handleSendMessage() {
         if (!newMessageStr) return
-        toast(newMessageStr)
 
-        const encrypted = encryptMessage(newMessageStr, roomKey)
-        console.log(encrypted)
-        // await socket 
+        const encrypted = await encryptMessage(newMessageStr, roomKey)
+        const encrMessage = uint8ToBase64(encrypted)
 
-        // setNewMessageStr('')
+        await socket.sendMessage(encrMessage)
     }
 
     return (
@@ -100,6 +105,17 @@ function RouteComponent() {
                     </Button>
                     <div className={cn("size-2 animate-ping rounded-full", socket.isConnected ? "bg-green-300" : "bg-red-300")}></div>
                 </div>
+            </div>
+            <div>
+                <ul>
+                    {messages.map(msg => (
+                        <li className='space-x-1'>
+                            <span className='text-pink-500 font-medium'>@{msg.from}</span>
+                            <span>{">"}</span>
+                            <span>{msg.message}</span>
+                        </li>
+                    ))}
+                </ul>
             </div>
             <div className='space-y-2'>
                 <Textarea value={newMessageStr} onChange={e => setNewMessageStr(e.currentTarget.value)} rows={5} className='resize-none' />

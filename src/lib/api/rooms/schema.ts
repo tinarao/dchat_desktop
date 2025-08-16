@@ -6,11 +6,12 @@ export const roomValidators = {
         .max(128, "Слишком длинное название комнаты")
         .optional(),
     isPrivate: z.boolean(),
+    encrRoomKeyB64: z.string()
 }
 
 export const createRoomSchema = z.object({
     withName: userValidators.userName,
-    isPrivate: roomValidators.isPrivate
+    isPrivate: roomValidators.isPrivate,
 })
 
 export type CreateRoomSchema = z.infer<typeof createRoomSchema>

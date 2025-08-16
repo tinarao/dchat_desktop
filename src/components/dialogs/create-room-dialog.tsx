@@ -17,8 +17,8 @@ import { toast } from "sonner"
 import useDebounce from "@/hooks/use-debounce"
 import { findUsers, getUserPublicKey } from "@/lib/api/users"
 import { User } from "@/lib/api/auth/types"
-import { saveRoomKeyForUser } from "@/lib/api/roomkeys"
-import { base64ToUint8, encryptRoomKeyForUser, encryptRoomKeyToBase64JSON, generateRoomKey, uint8ToBase64 } from "@/lib/encr"
+import { createRoomMember } from "@/lib/api/roomkeys"
+import { base64ToUint8, encryptRoomKeyForUser, encryptRoomKeyToBase64JSON, generateRoomKey } from "@/lib/encr"
 import { userStore } from "@/store/user"
 import { useNavigate } from "@tanstack/react-router"
 import { saveRawRoomKey } from "@/lib/room-keys"
@@ -94,14 +94,13 @@ export function CreateRoomDialog({ children }: PropsWithChildren) {
                 isPrivate
             })
 
-            if (!roomResult.ok || !roomResult.data) {
+            if (!roomResult.ok) {
                 toast.error(roomResult.error || "Failed to create room")
                 return
             }
 
             const rawRoomKey = generateRoomKey()
-            await saveRawRoomKey(rawRoomKey, roomResult.data.id)
-
+            await saveRawRoomKey(rawRoomKey, roomResult.data!.id)
 
             const myBytesPublicKey = base64ToUint8(currentUserPublicKey!)
             const theirBytesPublicKey = base64ToUint8(selectedUserPublicKey!)
@@ -113,12 +112,12 @@ export function CreateRoomDialog({ children }: PropsWithChildren) {
 
             try {
                 await Promise.all([
-                    saveRoomKeyForUser({
+                    createRoomMember({
                         userId: selectedUser.id,
                         roomId: roomResult.data!.id,
                         key: encryptRoomKeyToBase64JSON(theirRoomKey)
                     }),
-                    saveRoomKeyForUser({
+                    createRoomMember({
                         userId: currentUser.id,
                         roomId: roomResult.data!.id,
                         key: encryptRoomKeyToBase64JSON(myRoomKey)

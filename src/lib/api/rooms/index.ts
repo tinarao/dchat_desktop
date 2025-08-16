@@ -33,7 +33,7 @@ export async function getRoomById(roomId: number): Promise<Result<Room>> {
     const token = await getToken()
 
     try {
-        const route = getApiRoute("/rooms/id/" + roomId)
+        const route = getApiRoute("/rooms/show/" + roomId)
         const response = await fetch(route, {
             headers: {
                 "Authorization": "Bearer " + token

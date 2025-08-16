@@ -1,7 +1,7 @@
 import { Result } from "@/lib/result"
 import { ErrorResponse, getApiRoute } from ".."
 import { deleteToken, getToken, setToken } from "../../tokens"
-import { loginSchema, LoginSchema } from "./schema"
+import { loginSchema, LoginSchema, RegisterSchema } from "./schema"
 import { User, UserKebabCase } from "./types"
 
 export async function verifySession(): Promise<Result<User>> {
@@ -61,7 +61,7 @@ export async function login(data: LoginSchema): Promise<Result> {
     }
 }
 
-export async function signup(data: LoginSchema): Promise<Result> {
+export async function signup(data: RegisterSchema): Promise<Result> {
     const result = loginSchema.safeParse(data)
     if (!result.success) {
         return { ok: false, error: result.error.issues[0].message }

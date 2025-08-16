@@ -14,4 +14,15 @@ export const loginSchema = z.object({
         .max(128, "слишком длинный пароль")
 })
 
+export const registerSchema = z.object({
+
+    name: userValidators.userName,
+    password: z
+        .string({ message: "пароль не указан" })
+        .min(8, "слишком короткий пароль")
+        .max(128, "слишком длинный пароль"),
+    public_key: z.string()
+})
+
 export type LoginSchema = z.infer<typeof loginSchema>
+export type RegisterSchema = z.infer<typeof registerSchema>
