@@ -1,7 +1,31 @@
-# Tauri + React + Typescript
+# дич.ат
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+<p align="center">
+    <img src="https://skillicons.dev/icons?i=ts,react,tauri,tailwind" />
+</p>
 
-## Recommended IDE Setup
+## Чат со сквозным шифрованием
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+### Шифрование
+
+Безопасность общения обеспечивается сквозным шифрованием (E2EE):
+
+- Все сообщения шифруются на устройстве отправителя
+- Используется алгоритм AES-256-GCM
+- Секретные ключи шифрования никогда не покидают устройства пользователей
+- Сервер не имеет доступа к содержимому сообщений
+
+### Чат-комнаты
+
+- Создавайте приватные комнаты для общения
+- Доступ только по уникальному идентификатору комнаты
+- История сообщений хранится только локально
+
+## Сервер
+
+Приложение имеет [серверную часть](https://github.com/tinarao/dchatapi). Она необходима для навигации, проверки доступа и хранения истории сообщений. Сообщения хранятся в зашифрованном виде и не могут быть расшифрованы без ключей, которые хранятся ТОЛЬКО в клиентском приложении.
+
+## TODO
+
+- Дополнительная защита чатов паролями
+- Профили пользователей
