@@ -1,10 +1,8 @@
-# дич.ат
+# дич.ат - E2EE-мессенджер
 
 <p align="center">
     <img src="https://skillicons.dev/icons?i=ts,react,tauri,tailwind" />
 </p>
-
-## Чат со сквозным шифрованием
 
 ### Шифрование
 
@@ -24,6 +22,13 @@
 ## Сервер
 
 Приложение имеет [серверную часть](https://github.com/tinarao/dchatapi). Она необходима для навигации, проверки доступа и хранения истории сообщений. Сообщения хранятся в зашифрованном виде и не могут быть расшифрованы без ключей, которые хранятся ТОЛЬКО в клиентском приложении.
+
+## Стек
+
+- [Tauri](https://github.com/tauri-apps/tauri) - WebView. Как Electron, только лучше
+- [shadcn/ui](https://ui.shadcn.com/) - UI-компоненты
+- [TailwindCSS](https://tailwindcss.com/)
+- [Effector](https://effector.dev/) - Стейт-менеджер
 
 ## TODO
 
