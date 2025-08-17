@@ -3,13 +3,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
 import { logout } from "@/lib/api/auth";
 import { useNavigate } from "@tanstack/react-router";
-import { userStore } from "@/store/user";
 import { useState } from "react";
+import { useUnit } from "effector-react";
+import { $currentUser } from "@/store/user";
 
 export function AppSidebarFooter() {
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
-    const { user } = userStore()
+    const user = useUnit($currentUser)
 
     async function handleLogout() {
         setLoading(true)

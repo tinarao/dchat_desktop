@@ -1,12 +1,10 @@
 import { AppSidebar } from '@/components/sidebar/app-sidebar'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { verifySession } from '@/lib/api/auth'
-import { getMyRooms } from '@/lib/api/rooms'
-import { $rooms, fetchedRoomsList, roomCreated } from '@/store/chats'
-import { userStore } from '@/store/user'
+import { fetchMyRooms } from '@/store/chats'
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { useEffect } from 'react'
-import { useUnit } from "effector-react"
+import { fetchCurrentUser } from '@/store/user'
+import { PendingPage } from '@/components/pending-page'
 
 export const Route = createFileRoute('/_app')({
     component: RouteComponent,
@@ -17,31 +15,14 @@ export const Route = createFileRoute('/_app')({
                 to: "/auth",
             })
         }
-    }
+
+        await fetchCurrentUser()
+        await fetchMyRooms()
+    },
+    pendingComponent: PendingPage
 })
 
 function RouteComponent() {
-    const fetched = useUnit(fetchedRoomsList)
-    const { fetchUserData } = userStore()
-
-    useEffect(() => {
-        fetchUserData()
-    }, [])
-
-    useEffect(() => {
-        getMyRooms()
-            .then(result => {
-                if (result.ok && result.data) {
-                    fetched(result.data)
-                    return
-                }
-
-                throw redirect({
-                    to: "/app"
-                })
-            })
-    }, [])
-
     return (
         <SidebarProvider>
             <AppSidebar />

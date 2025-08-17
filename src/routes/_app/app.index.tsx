@@ -1,6 +1,7 @@
 import { getPrivateKey } from '@/lib/private-keys'
-import { userStore } from '@/store/user'
+import { $currentUser } from '@/store/user'
 import { createFileRoute } from '@tanstack/react-router'
+import { useUnit } from 'effector-react'
 import { useEffect, useState } from 'react'
 
 export const Route = createFileRoute('/_app/app/')({
@@ -8,7 +9,7 @@ export const Route = createFileRoute('/_app/app/')({
 })
 
 function RouteComponent() {
-    const { user } = userStore()
+    const user = useUnit($currentUser)
     const [privateKey, setPrivateKey] = useState<string | undefined>(undefined)
 
     useEffect(() => {

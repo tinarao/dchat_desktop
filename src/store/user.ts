@@ -1,21 +1,13 @@
 import { verifySession } from "@/lib/api/auth"
 import { User } from "@/lib/api/auth/types"
-import { create } from "zustand"
+import { createEffect, createStore } from "effector"
 
-interface UserStorage {
-    user?: User
-    fetchUserData: () => Promise<void>
-}
+export const $currentUser = createStore<User | null>(null)
+export const fetchCurrentUser = createEffect(async () => {
+    return await verifySession()
+})
 
-export const userStore = create<UserStorage>()((set, _get) => ({
-    user: undefined,
-    async fetchUserData() {
-        const result = await verifySession()
-        if (result.ok) {
-            set({ user: result.data })
-            return
-        }
-
-        throw "Unauthorized"
-    },
-}))
+$currentUser.on(fetchCurrentUser.done, (_, { result }) => {
+    if (!result.ok) return null
+    else return result.data
+})

@@ -105,7 +105,8 @@ export async function createRoom(data: CreateRoomSchema): Promise<Result<Room>> 
     }
 }
 
-export async function deleteRoom(roomId: number): Promise<Result> {
+// Ok returns room id 
+export async function deleteRoom(roomId: number): Promise<Result<number>> {
     const token = await getToken();
     const route = getApiRoute("/rooms/" + roomId)
 
@@ -123,7 +124,7 @@ export async function deleteRoom(roomId: number): Promise<Result> {
             return { ok: false, error: json.error }
         }
 
-        return { ok: true }
+        return { ok: true, data: roomId }
     } catch (e) {
         console.error(e)
         return { ok: false, error: "Сервер недоступен" }

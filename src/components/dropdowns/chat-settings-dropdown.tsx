@@ -9,7 +9,6 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,14 +17,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Room } from "@/lib/api/rooms/types"
 import { clearChatHistory } from "@/lib/messages"
-import { userStore } from "@/store/user"
+import { $currentUser } from "@/store/user"
+import { useUnit } from "effector-react"
 import { TrashIcon } from "lucide-react"
 import { toast } from "sonner"
 
 type CSDProps = React.PropsWithChildren<{ room: Room }>
 
 export function ChatSettingsDropdown({ children, room }: CSDProps) {
-    const { user } = userStore()
+    const user = useUnit($currentUser)
 
     async function handleClearHistory() {
         const result = await clearChatHistory(room.id)

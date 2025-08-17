@@ -7,8 +7,9 @@ import { getRoomById } from '@/lib/api/rooms'
 import { base64ToEncryptRoomKeyJSON, base64ToUint8, decryptMessage, decryptRoomKeyForUser, encryptMessage, uint8ToBase64 } from '@/lib/encr'
 import { getPrivateKey } from '@/lib/private-keys'
 import { cn } from '@/lib/utils'
-import { userStore } from '@/store/user'
+import { $currentUser } from '@/store/user'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { useUnit } from 'effector-react'
 import { CogIcon, MessageCirclePlus } from 'lucide-react'
 import { memo, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -77,7 +78,7 @@ function RouteComponent() {
     const [messages, setMessages] = useState<DecryptedMessage[]>([])
     const { room, roomKey } = Route.useLoaderData()
     const newMessageInputRef = useRef<HTMLTextAreaElement | null>(null)
-    const { user } = userStore()
+    const user = useUnit($currentUser)
     const socket = useSocket()
     const navigate = useNavigate()
 

@@ -19,12 +19,12 @@ import { findUsers, getUserPublicKey } from "@/lib/api/users"
 import { User } from "@/lib/api/auth/types"
 import { createRoomMember } from "@/lib/api/roomkeys"
 import { base64ToUint8, encryptRoomKeyForUser, encryptRoomKeyToBase64JSON, generateRoomKey } from "@/lib/encr"
-import { userStore } from "@/store/user"
 import { useNavigate } from "@tanstack/react-router"
 import { saveRawRoomKey } from "@/lib/room-keys"
 import { cn } from "@/lib/utils"
 import { useUnit } from "effector-react"
 import { roomCreated } from "@/store/chats"
+import { $currentUser } from "@/store/user"
 
 export function CreateRoomDialog({ children }: PropsWithChildren) {
     const onRoomCreated = useUnit(roomCreated)
@@ -33,7 +33,7 @@ export function CreateRoomDialog({ children }: PropsWithChildren) {
     const [loading, setLoading] = useState(false)
     const [searchResults, setSearchResults] = useState<User[]>([])
     const [selectedUser, setSelectedUser] = useState<User | null>(null)
-    const { user: currentUser } = userStore()
+    const currentUser = useUnit($currentUser)
     const navigate = useNavigate()
 
     const debouncedWithName = useDebounce(withName, 500)
@@ -53,9 +53,10 @@ export function CreateRoomDialog({ children }: PropsWithChildren) {
 
                 toast.error(r.error)
             })
-
     }, [debouncedWithName])
 
+    // This thing here pretty much can be
+    // moved to effector thing. TODO
     async function handleCreateRoom() {
         if (!selectedUser) {
             toast.error("Пользователь не выбран")
