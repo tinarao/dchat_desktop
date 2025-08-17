@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { useSocket } from '@/hooks/use-socket'
+import { EncryptedMessage, useSocket } from '@/hooks/use-socket'
 import { getEncryptedRoomKey } from '@/lib/api/roomkeys'
 import { getRoomById } from '@/lib/api/rooms'
 import { base64ToEncryptRoomKeyJSON, base64ToUint8, decryptMessage, decryptRoomKeyForUser, encryptMessage, uint8ToBase64 } from '@/lib/encr'
@@ -45,8 +45,9 @@ export const Route = createFileRoute('/_app/app/chat/$roomId')({
 })
 
 type DecryptedMessage = {
+    id: number
     message: string
-    from: string
+    user: string
     createdAt: string
 }
 
@@ -57,24 +58,33 @@ function RouteComponent() {
     const socket = useSocket()
     const navigate = useNavigate()
 
+    async function getDecryptedMessage(message: EncryptedMessage) {
+        const bytesMsg = base64ToUint8(message.cipher_text)
+        const decrypted = await decryptMessage(bytesMsg, roomKey)
+
+        return {
+            id: message.id,
+            user: message.user.name,
+            message: decrypted,
+            createdAt: message.inserted_at
+        }
+    }
+
     useEffect(() => {
         if (!room) throw navigate({ to: "/" })
 
         socket.init(`chat_channel:${room.id}`, {
-            onConnect(messages) {
-                toast.success(JSON.stringify(messages))
-            },
-            async onMessage(message) {
-                const bytesMsg = base64ToUint8(message.message)
-                const decrypted = await decryptMessage(bytesMsg, roomKey)
-                toast.success(decrypted)
-
-                const decr: DecryptedMessage = {
-                    from: message.from,
-                    message: decrypted,
-                    createdAt: message.created_at
+            async onConnect(messages) {
+                if (!messages || !Array.isArray(messages)) {
+                    toast.error("Не удалось загрузить историю сообщений")
+                    return
                 }
 
+                const decrMessages = await Promise.all(messages.map(getDecryptedMessage))
+                setMessages(decrMessages)
+            },
+            async onMessage(message) {
+                const decr = await getDecryptedMessage(message)
                 setMessages(p => [...p, decr])
             },
             onError(error) {
@@ -109,8 +119,8 @@ function RouteComponent() {
             <div>
                 <ul>
                     {messages.map(msg => (
-                        <li className='space-x-1'>
-                            <span className='text-pink-500 font-medium'>@{msg.from}</span>
+                        <li key={msg.id} className='space-x-1'>
+                            <span className='text-pink-500 font-medium'>@{msg.user}</span>
                             <span>{">"}</span>
                             <span>{msg.message}</span>
                         </li>

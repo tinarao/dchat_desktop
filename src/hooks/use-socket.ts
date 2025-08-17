@@ -1,3 +1,4 @@
+import { User } from "@/lib/api/auth/types";
 import { WS_CHAT_URL } from "@/lib/constants";
 import { getToken } from "@/lib/tokens";
 import { Channel, Socket } from "phoenix";
@@ -5,10 +6,11 @@ import { useState } from "react";
 
 type Topic = `chat_channel:${string}`
 
-type EncryptedMessage = {
-    message: string,
-    created_at: string,
-    from: string
+export type EncryptedMessage = {
+    id: number
+    cipher_text: string,
+    user: User
+    inserted_at: string,
 }
 
 // Server-returned error messages are
@@ -34,11 +36,11 @@ export function useSocket() {
     const [messages, setMessages] = useState<EncryptedMessage[]>([])
     const [isConnected, setIsConnected] = useState(false)
 
-    async function sendMessage(msgBase64: string) {
+    async function sendMessage(cipherText: string) {
         const token = await getToken()
         channel?.push(NEW_MESSAGE_EVENT, {
-            msgBase64: msgBase64,
-            token: token
+            cipherText,
+            token
         })
             .receive("ok", console.log)
             .receive("error", ({ error }: { error: RecievedError }) => {
@@ -67,6 +69,7 @@ export function useSocket() {
 
             channel_.join()
                 .receive("ok", ({ messages }) => {
+                    console.log("raw messagse", messages)
                     setIsConnected(true)
                     args.onConnect?.(messages as EncryptedMessage[])
                 })
