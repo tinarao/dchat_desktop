@@ -12,12 +12,12 @@ import { Room } from "@/lib/api/rooms/types"
 import { CreateRoomDialog } from "../dialogs/create-room-dialog"
 import { SidebarRoomButton } from "./sidebar-room-button"
 import { AppSidebarFooter } from "./app-sidebar-footer"
+import { useUnit } from "effector-react"
+import { $rooms } from "@/store/chats"
 
-interface Props {
-    createdRooms: Room[]
-}
+export function AppSidebar() {
+    const rooms = useUnit($rooms)
 
-export function AppSidebar({ createdRooms }: Props) {
     return (
         <Sidebar variant="floating">
             <SidebarContent>
@@ -34,7 +34,7 @@ export function AppSidebar({ createdRooms }: Props) {
 
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {createdRooms.map(room => (
+                            {rooms.map(room => (
                                 <SidebarRoomButton key={room.id} room={room} />
                             ))}
                         </SidebarMenu>

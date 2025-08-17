@@ -23,8 +23,11 @@ import { userStore } from "@/store/user"
 import { useNavigate } from "@tanstack/react-router"
 import { saveRawRoomKey } from "@/lib/room-keys"
 import { cn } from "@/lib/utils"
+import { useUnit } from "effector-react"
+import { roomCreated } from "@/store/chats"
 
 export function CreateRoomDialog({ children }: PropsWithChildren) {
+    const onRoomCreated = useUnit(roomCreated)
     const [withName, setWithName] = useState("")
     const [isPrivate, setIsPrivate] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -97,6 +100,10 @@ export function CreateRoomDialog({ children }: PropsWithChildren) {
             if (!roomResult.ok) {
                 toast.error(roomResult.error || "Failed to create room")
                 return
+            }
+
+            if (roomResult.data) {
+                onRoomCreated(roomResult.data)
             }
 
             const rawRoomKey = generateRoomKey()
